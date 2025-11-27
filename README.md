@@ -1,0 +1,47 @@
+# dbt-moddocs
+
+> *dbt modular docs - write Javadoc-style inline dbt model & column docs (no more separate YAML files!)*
+
+Advantages:
+ - Reduce risk of docs getting out of sync with implementation by keeping documentation next to the code.
+ - Reduce repetition by specifying model/column names in only one place.
+ - ...
+
+Original prototype described at [dbt-labs/dbt-core#5093 (comment)](https://github.com/dbt-labs/dbt-core/discussions/5093#discussioncomment-3159441).
+
+## Example
+
+```sql
+-- file: mymodel.sql
+
+/** @moddoc
+This is my super cool model! It does cool things!
+
+Have as many lines as you want.
+
+You can even define tests and other model properties too by adding `---` on a line of its own,
+then specifying yaml properties, except for:
+- `name`, which is automatically set to the model name; and
+- `description`, which is pulled from this comment itself (up to and excluding a standalone `---` line).
+**/
+
+select
+  ... as my_cool_column /** @coldoc
+    This is my description of a cool column in my model. This whole paragraph gets extracted into a
+    yaml file as the description for the column.
+
+    Similar to the top-level @moddoc, you can define *column* tests and other column properties by
+    adding `---` on a line of its own, then specifying yaml properties for the column, except for:
+     - `name`, which is automatically pulled from the SQL identifier just before this comment; and
+     - `description`, which is pulled from the comment itself (up to and excluding a standalone `---` line).
+
+    ---
+    data_type: text
+    data_tests:
+    - not_null
+    - accepted_values
+        arguments:
+          values: ["Cool", "Cooler", "Coolest"]
+  **/
+  ... 
+```

@@ -1,0 +1,17 @@
+[project]
+name = "dbt-moddocs"
+version = "0.1.0"
+description = "dbt modular docs - write Javadoc-style inline dbt model & column docs (no more separate YAML files!)"
+readme = "README.md"
+authors = [
+    { name = "Tim Vergenz", email = "vergenzt@gmail.com" },
+]
+requires-python = ">=3.14"
+dependencies = []
+
+[project.scripts]
+dbt-dox = "dbt_dox:main"
+
+[build-system]
+requires = ["uv_build>=0.8.14,<0.9.0"]
+build-backend = "uv_build"
