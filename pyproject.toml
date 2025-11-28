@@ -1,7 +1,7 @@
 [project]
-name = "dbt-moddocs"
+name = "dbt-inline-docs"
 version = "0.1.0"
-description = "dbt modular docs - write Javadoc-style inline dbt model & column docs (no more separate YAML files!)"
+description = "Write inline Javadoc-style dbt model & column docs (no more separate YAML files!)"
 readme = "README.md"
 authors = [
     { name = "Tim Vergenz", email = "vergenzt@gmail.com" },

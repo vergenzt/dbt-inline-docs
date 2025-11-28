@@ -1,6 +1,6 @@
-# dbt-moddocs
+# dbt-inline-docs
 
-> *dbt modular docs - write Javadoc-style inline dbt model & column docs (no more separate YAML files!)*
+> *Write inline Javadoc-style dbt model & column docs (no more separate YAML files!)*
 
 Advantages:
  - Reduce risk of docs getting out of sync with implementation by keeping documentation next to the code.
@@ -9,7 +9,7 @@ Advantages:
 
 Original prototype described at [dbt-labs/dbt-core#5093 (comment)](https://github.com/dbt-labs/dbt-core/discussions/5093#discussioncomment-3159441).
 
-## Example
+## Vision
 
 ```sql
 -- file: mymodel.sql
