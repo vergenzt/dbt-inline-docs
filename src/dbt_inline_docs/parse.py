@@ -25,6 +25,12 @@ COLUMN_NAME_PATTERN = re.compile(
     re.IGNORECASE
 )
 
+# Number of characters to look back when searching for column name
+# This should be enough to capture typical column definitions like:
+#   "column_name " or "expression as column_name "
+COLUMN_NAME_LOOKBACK_CHARS = 50
+
+
 
 @dataclass
 class DocComment:
@@ -79,9 +85,9 @@ def parse_doc_comments(sql: str) -> list[DocComment]:
             # Look backwards from the comment position to find column name
             sql_before = sql[:match.start()]
             
-            # Take only the last ~50 chars which should be the immediate column definition
+            # Take only the last N chars which should be the immediate column definition
             # This avoids matching identifiers from earlier in the SQL
-            relevant_text = sql_before[-50:]
+            relevant_text = sql_before[-COLUMN_NAME_LOOKBACK_CHARS:]
             
             # Look for the last identifier, optionally after 'as'
             # This handles: "col_name " or "as col_name "
