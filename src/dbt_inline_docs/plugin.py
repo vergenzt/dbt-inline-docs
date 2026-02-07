@@ -48,26 +48,64 @@ class DbtInlineDocsPlugin(dbtPlugin):
 
 @patches((cls := ManifestLoader), cls.load_and_parse_macros)
 def load_macros_with_doc_comment_checking(orig, self: ManifestLoader, project_parser_files):
+    """Load macros - placeholder for future macro documentation support."""
     result = orig(self, project_parser_files)
-
-    for name, macro in self.manifest.macros.items():
-
+    # Future: check macros for doc comments if needed
     return result
 
 
-def 
-
-
-@patches((cls := CompileRunner), cls.compile)
-def compile_and_add_docs(orig, self, manifest: Manifest) -> ManifestSQLNode:
+@patches((cls := ManifestLoader), cls.parse_project)
+def parse_project_with_inline_docs(orig, self: ManifestLoader, project_parser_files, project):
     """
-    Replacement for CompileRunner.compile which incorporates inline @modeldoc and @coldoc
-    comments into model and column properties.
-
-    Problem: How do we
+    Hook into parse_project to extract inline doc comments after parsing models.
+    This is where we inject descriptions from @moddoc and @coldoc into the manifest.
     """
-    compiled = orig(self, manifest)
+    from .parse import parse_doc_comments
+    
+    # First, let the normal parsing happen
+    result = orig(self, project_parser_files, project)
+    
+    # Now process all nodes to extract inline documentation
+    for unique_id, node in self.manifest.nodes.items():
+        # Only process SQL nodes (models, seeds, etc.)
+        if not hasattr(node, 'raw_code'):
+            continue
+            
+        raw_sql = node.raw_code
+        if not raw_sql:
+            continue
+        
+        # Parse doc comments from the SQL
+        doc_comments = parse_doc_comments(raw_sql)
+        
+        if not doc_comments:
+            continue
+        
+        # Process moddoc comments (model-level documentation)
+        for comment in doc_comments:
+            if comment.tag == 'moddoc':
+                # Set model description
+                if not node.description:  # Don't override existing descriptions
+                    node.description = comment.description
+            
+            elif comment.tag == 'coldoc' and comment.column_name:
+                # Set column description
+                # Ensure columns dict exists
+                if not hasattr(node, 'columns') or node.columns is None:
+                    node.columns = {}
+                
+                # Find or create column entry
+                column_name = comment.column_name
+                if column_name not in node.columns:
+                    # Create a new column entry
+                    from dbt.contracts.graph.nodes import ColumnInfo
+                    node.columns[column_name] = ColumnInfo(
+                        name=column_name,
+                        description=comment.description
+                    )
+                elif not node.columns[column_name].description:
+                    # Update existing column if it has no description
+                    node.columns[column_name].description = comment.description
+    
+    return result
 
-    # ...
-
-    return compiled
