@@ -1,0 +1,10 @@
+README.md
+pyproject.toml
+src/dbt_inline_docs/__init__.py
+src/dbt_inline_docs/parse.py
+src/dbt_inline_docs/plugin.py
+src/dbt_inline_docs.egg-info/PKG-INFO
+src/dbt_inline_docs.egg-info/SOURCES.txt
+src/dbt_inline_docs.egg-info/dependency_links.txt
+src/dbt_inline_docs.egg-info/requires.txt
+src/dbt_inline_docs.egg-info/top_level.txt
