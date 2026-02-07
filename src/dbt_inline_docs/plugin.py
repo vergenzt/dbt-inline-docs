@@ -54,20 +54,18 @@ def load_macros_with_doc_comment_checking(orig, self: ManifestLoader, project_pa
     return result
 
 
-@patches((cls := ManifestLoader), cls.parse_project)
-def parse_project_with_inline_docs(orig, self: ManifestLoader, project_parser_files, project):
+@patches((cls := ManifestLoader), cls.process_docs)
+def process_docs_with_inline_docs(orig, self: ManifestLoader, config):
     """
-    Hook into parse_project to extract inline doc comments after parsing models.
-    This is where we inject descriptions from @moddoc and @coldoc into the manifest.
+    Hook into process_docs to extract inline doc comments and inject them into the manifest.
+    This runs after parsing but before the normal doc block processing, so we can add
+    descriptions from @moddoc and @coldoc comments.
     """
     from .parse import parse_doc_comments
     
-    # First, let the normal parsing happen
-    result = orig(self, project_parser_files, project)
-    
-    # Now process all nodes to extract inline documentation
+    # First, inject inline documentation before normal doc processing
     for unique_id, node in self.manifest.nodes.items():
-        # Only process SQL nodes (models, seeds, etc.)
+        # Only process SQL nodes (models, etc.) with raw_code
         if not hasattr(node, 'raw_code'):
             continue
             
@@ -84,13 +82,13 @@ def parse_project_with_inline_docs(orig, self: ManifestLoader, project_parser_fi
         # Process moddoc comments (model-level documentation)
         for comment in doc_comments:
             if comment.tag == 'moddoc':
-                # Set model description
-                if not node.description:  # Don't override existing descriptions
+                # Set model description if not already set
+                if not node.description:
                     node.description = comment.description
             
             elif comment.tag == 'coldoc' and comment.column_name:
                 # Set column description
-                # Ensure columns dict exists
+                # Initialize columns dict if needed
                 if not hasattr(node, 'columns') or node.columns is None:
                     node.columns = {}
                 
@@ -107,5 +105,6 @@ def parse_project_with_inline_docs(orig, self: ManifestLoader, project_parser_fi
                     # Update existing column if it has no description
                     node.columns[column_name].description = comment.description
     
-    return result
+    # Now run the normal doc processing
+    return orig(self, config)
 

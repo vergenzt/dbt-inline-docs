@@ -11,8 +11,9 @@ from typing import Optional
 
 # Regex patterns for finding doc comments
 # Matches: /** @moddoc or /** @coldoc
+# Captures content between the tag and the closing **/
 DOC_COMMENT_PATTERN = re.compile(
-    r'/\*\*\s*@(moddoc|coldoc)\s*(.*?)\*/',
+    r'/\*\*\s*@(moddoc|coldoc)\s+(.*?)\*+/',
     re.DOTALL | re.MULTILINE
 )
 
