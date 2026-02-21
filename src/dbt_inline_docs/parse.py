@@ -1,54 +1,56 @@
-"""
-Functions which will have to hook into dbt project *parsing* in order to extract [model
-properties](https://docs.getdbt.com/reference/model-properties) which are specified in @*doc
-comments.
-"""
+from dataclasses import replace
 
-from enum import Enum, auto
-import re
-from typing import Iterable, Literal
-from jinja2 import Environment
-from jinja2.ext import Extension
-from jinja2.lexer import TokenStream, Token
+from dbt.contracts.files import ParseFileType, SchemaSourceFile
+from dbt.parser.base import FinalNode, Parser
+from dbt.parser.schemas import SchemaParser
+from dbt.parser.search import FileBlock
+from dbt_common.utils import deep_merge
 
-DOC_COMMENT_OPEN_RE = re.compile(rf"{re.escape("/**")} \s* @ (?P<tag> modeldoc | coldoc ) \b", re.VERBOSE)
+from .extract import DocComment
 
 
-
-
-
-class JinjaDocCommentExtension(Extension):
+def parse_inline_docs(node_parser: Parser[FinalNode], node: FinalNode):
     """
-    This extension implements support for inline @modeldoc and @coldoc comments, translating them
-    into ???
+    Parse any inline node docs, updating the node in-place with their contents.
     """
+    code = getattr(node, "parsed_code", None) or getattr(node, "raw_code", None)
+    if not code:
+        return
 
-    tags = {"modeldoc", "coldoc"}
+    docs = list(DocComment.find_all(code, node))
+    if not docs:
+        return
 
-    def filter_stream(self, stream: TokenStream) -> Iterable[Token]:
-        state: Literal["out", "in"] = "out"
+    node_dct = {"name": node.name}
+    for doc in docs:
+        if doc.column:
+            column = doc.all_properties()
+            columns = node_dct.setdefault("columns", [])
+            columns.append(column)
 
-        for token in stream:
-            match state, token:
-                case "out", Token(lineno, "data", val) if (match := DOC_COMMENT_OPEN_RE.match(val)):
-                    yield 
-                    ...
-                case _:
-                    yield token
+        else:
+            prev_description = node_dct.get("description")
+            node_dct = deep_merge(node_dct, doc.all_properties())
 
-    def _handle_modeldoc_call(self, )
+            if prev_description:
+                node_dct["description"] = f"{prev_description}\n\n{doc.description}"
 
+    schema_parser = SchemaParser(
+        node_parser.project, node_parser.manifest, node_parser.root_project
+    )
+    node_source_file = node_parser.manifest.files[node.file_id]
+    node_schema_dct = {node.resource_type.pluralize(): [node_dct]}
 
+    fake_schema_source_file = SchemaSourceFile(
+        node_source_file.path,
+        node_source_file.checksum,
+        node.package_name,
+        ParseFileType.Schema,
+        dfy=node_schema_dct,
+    )
+    fake_schema_source_block = FileBlock(fake_schema_source_file)
 
+    # ensure the schema parser can find the main node
+    node_parser.manifest.ref_lookup.add_node(node)
 
-
-def search_raw_sql_for_doc_comments(sql: str):
-    """
-    Search for @*doc comments in the raw (uncompiled) SQL of the given node.
-
-    Let's search macros too - so we can mark any which themselves yield @*doc comments.
-
-    @*doc comments which contain anything that needs to be known by the end of parsing (TBD what all
-    exactly that is, but at minimum it includes test nodes). (Will need to come up with an allowlist
-    of what all can be present.)
-    """
+    schema_parser.parse_file(fake_schema_source_block, node_schema_dct)
